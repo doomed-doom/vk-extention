@@ -1,20 +1,32 @@
-const form = document.getElementById("folder-form");
-const input = document.getElementById("download-folder");
+const button = document.getElementById("choose-folder");
 const status = document.getElementById("status");
+//
 
-chrome.storage.local.get({ downloadFolder: "VK Photos" }, ({ downloadFolder }) => {
-  input.value = downloadFolder;
-});
+function renderFolder() {
+  chrome.storage.local.get({ downloadFolder: "VK Photos" }, ({ downloadFolder }) => {
+    button.textContent = `${downloadFolder}`;
+  });
+}
 
-form.addEventListener("submit", (event) => {
-  event.preventDefault();
-  const folder = input.value.trim();
-  if (!folder || /^[\\/]/.test(folder) || /^[a-z]:/i.test(folder) || folder.split(/[\\/]/).includes("..")) {
-    status.textContent = "Укажи подпапку внутри Downloads.";
+button.addEventListener("click", async () => {
+  if (!window.showDirectoryPicker) {
+    status.textContent = "Браузер не поддерживает выбор папки.";
     return;
   }
 
-  chrome.storage.local.set({ downloadFolder: folder }, () => {
-    status.textContent = chrome.runtime.lastError?.message || "Папка сохранена.";
-  });
+  try {
+    const handle = await window.showDirectoryPicker({ startIn: "downloads" });
+    chrome.storage.local.set({ downloadFolder: handle.name }, () => {
+      if (chrome.runtime.lastError) {
+        status.textContent = chrome.runtime.lastError.message;
+        return;
+      }
+      renderFolder();
+      status.textContent = `Выбрано: Downloads/${handle.name}`;
+    });
+  } catch (error) {
+    if (error.name !== "AbortError") status.textContent = error.message;
+  }
 });
+
+renderFolder();

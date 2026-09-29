@@ -43,6 +43,26 @@ function downloadPhoto(url, path) {
   });
 }
 
+async function pngAsJpegUrl(url) {
+  const response = await fetch(url, { credentials: "include" });
+  if (!response.ok) throw new Error(`Не удалось получить PNG: HTTP ${response.status}`);
+
+  const bitmap = await createImageBitmap(await response.blob());
+  const canvas = new OffscreenCanvas(bitmap.width, bitmap.height);
+  const context = canvas.getContext("2d");
+  context.fillStyle = "#fff";
+  context.fillRect(0, 0, canvas.width, canvas.height);
+  context.drawImage(bitmap, 0, 0);
+  bitmap.close();
+
+  const bytes = new Uint8Array(await (await canvas.convertToBlob({ type: "image/jpeg", quality: 0.92 })).arrayBuffer());
+  let binary = "";
+  for (let offset = 0; offset < bytes.length; offset += 0x8000) {
+    binary += String.fromCharCode(...bytes.subarray(offset, offset + 0x8000));
+  }
+  return `data:image/jpeg;base64,${btoa(binary)}`;
+}
+
 async function startDownloads(message) {
   const photos = message.photos || (message.urls || []).map((url) => ({ previewUrl: url }));
   const seen = new Set();
@@ -63,10 +83,13 @@ async function startDownloads(message) {
   try {
     for (const [index, photo] of uniquePhotos.entries()) {
       const url = photo.originalUrl || photo.previewUrl;
-      const extension = String(photo.filename || "").match(/\.(jpe?g|png|webp|gif)$/i)?.[1]
+      const sourceExtension = String(photo.filename || "").match(/\.(jpe?g|png|webp|gif)$/i)?.[1]
         || new URL(url).pathname.match(/\.(jpe?g|png|webp|gif)$/i)?.[1]
         || "jpg";
-      await downloadPhoto(url, `${folder}/${chat}/photo_${startIndex + index}.${extension}`);
+      const isPng = sourceExtension.toLowerCase() === "png";
+      const downloadUrl = isPng ? await pngAsJpegUrl(url) : url;
+      const extension = isPng ? "jpg" : sourceExtension;
+      await downloadPhoto(downloadUrl, `${folder}/${chat}/photo_${startIndex + index}.${extension}`);
       count += 1;
     }
   } catch (error) {

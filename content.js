@@ -176,7 +176,7 @@
         let photoCount = response.count ?? selectedPhotoCount();
         console.log(
           photoCount
-            ? `Загружается ${photoCount} фотографий`
+            ? `Загружается ${photoCount} фото`
             : "Не обнаружено кандидатов для скачивания"
         );
       });

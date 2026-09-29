@@ -42,8 +42,7 @@
         margin-bottom: 8px;
       }
 
-      button,
-      input {
+      button {
         background: var(--button-bg);
         border: 1px solid var(--border);
         border-radius: 8px;
@@ -64,8 +63,9 @@
         background: var(--button-bg-hover);
       }
 
-      #download-folder {
+      #choose-folder {
         font-size: 15px;
+        font-weight: 700;
       }
 
       #status,
@@ -86,12 +86,9 @@
     </style>
   </head>
   <body>
-    <form id="folder-form">
-      <label for="download-folder">Подпапка в Downloads</label>
-      <input id="download-folder" name="folder" type="text" value="VK Photos" autocomplete="off" spellcheck="false">
-      <button type="submit" style="margin-top: 8px">Сохранить</button>
-    </form>
-    <div class="hint">Можно указать вложенный путь, например VK Photos/Чаты. Папки создаются автоматически.</div>
+    <label for="choose-folder">Папка для фото</label>
+    <button id="choose-folder" type="button">Downloads/VK Photos</button>
+    <div class="hint">Выберите папку для загрузки фото. Учтите, что все файлы будут сохраняться только в папку, определенную браузером для загрузок.</div>
     <div id="status" role="status" aria-live="polite"></div>
     <script src="popup.js"></script>
   </body>
