@@ -7,10 +7,10 @@
     "default_title": "VK Photo Extention",
     "default_popup": "popup.html"
   },
-  "options_ui": {
-    "page": "folder.html",
-    "open_in_tab": true
-  },
+  "permissions": [
+    "downloads",
+    "storage"
+  ],
   "background": {
     "service_worker": "background.js"
   },

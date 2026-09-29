@@ -42,32 +42,41 @@
         margin-bottom: 8px;
       }
 
-      button {
+      button,
+      input {
         background: var(--button-bg);
         border: 1px solid var(--border);
         border-radius: 8px;
+        box-sizing: border-box;
         color: var(--text);
-        cursor: pointer;
         font: inherit;
         min-height: 38px;
         padding: 8px 10px;
-        text-align: left;
         width: 100%;
+      }
+
+      button {
+        cursor: pointer;
+        text-align: left;
       }
 
       button:hover {
         background: var(--button-bg-hover);
       }
 
-      #choose-folder {
+      #download-folder {
         font-size: 15px;
-        font-weight: 700;
       }
 
       #status,
       .hint {
         color: var(--muted);
         font-size: 12px;
+      }
+
+      #status {
+        margin-top: 8px;
+        min-height: 16px;
       }
 
       .hint {
@@ -77,9 +86,13 @@
     </style>
   </head>
   <body>
-    <label for="choose-folder">Папка для фото</label>
-    <button id="choose-folder" type="button">Выбрать папку</button>
-    <div class="hint">Оставь вкладку расширения открытой, чтобы сохранять фото в эту папку.</div>
+    <form id="folder-form">
+      <label for="download-folder">Подпапка в Downloads</label>
+      <input id="download-folder" name="folder" type="text" value="VK Photos" autocomplete="off" spellcheck="false">
+      <button type="submit" style="margin-top: 8px">Сохранить</button>
+    </form>
+    <div class="hint">Можно указать вложенный путь, например VK Photos/Чаты. Папки создаются автоматически.</div>
+    <div id="status" role="status" aria-live="polite"></div>
     <script src="popup.js"></script>
   </body>
 </html>
