@@ -1,0 +1,40 @@
+{
+  "manifest_version": 3,
+  "name": "VK Photo Extention",
+  "version": "1.0.0",
+  "description": "Extends VK messanger features.",
+  "action": {
+    "default_title": "VK Photo Extention",
+    "default_popup": "popup.html"
+  },
+  "options_ui": {
+    "page": "folder.html",
+    "open_in_tab": true
+  },
+  "background": {
+    "service_worker": "background.js"
+  },
+  "host_permissions": [
+    "https://vk.com/*",
+    "https://*.vk.com/*",
+    "https://vk.ru/*",
+    "https://*.vk.ru/*",
+    "https://*.vkuserphoto.ru/*",
+    "https://*.userapi.com/*"
+  ],
+  "content_scripts": [
+    {
+      "matches": [
+        "https://vk.com/*",
+        "https://*.vk.com/*",
+        "https://vk.ru/*",
+        "https://*.vk.ru/*"
+      ],
+      "js": [
+        "content.js"
+      ],
+      "run_at": "document_idle",
+      "world": "ISOLATED"
+    }
+  ]
+}
