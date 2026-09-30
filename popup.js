@@ -1,32 +1,27 @@
-const button = document.getElementById("choose-folder");
+const input = document.getElementById("download-folder");
+const button = document.getElementById("save-folder");
 const status = document.getElementById("status");
-//
 
 function renderFolder() {
   chrome.storage.local.get({ downloadFolder: "VK Photos" }, ({ downloadFolder }) => {
-    button.textContent = `${downloadFolder}`;
+    input.value = downloadFolder;
   });
 }
 
-button.addEventListener("click", async () => {
-  if (!window.showDirectoryPicker) {
-    status.textContent = "Браузер не поддерживает выбор папки.";
-    return;
-  }
+button.addEventListener("click", () => {
+  const downloadFolder = input.value.trim() || "VK Photos";
+  chrome.storage.local.set({ downloadFolder }, () => {
+    if (chrome.runtime.lastError) {
+      status.textContent = chrome.runtime.lastError.message;
+      return;
+    }
+    input.value = downloadFolder;
+    status.textContent = "Изменения сохранены";
+  });
+});
 
-  try {
-    const handle = await window.showDirectoryPicker({ startIn: "downloads" });
-    chrome.storage.local.set({ downloadFolder: handle.name }, () => {
-      if (chrome.runtime.lastError) {
-        status.textContent = chrome.runtime.lastError.message;
-        return;
-      }
-      renderFolder();
-      status.textContent = `Выбрано: Downloads/${handle.name}`;
-    });
-  } catch (error) {
-    if (error.name !== "AbortError") status.textContent = error.message;
-  }
+input.addEventListener("input", () => {
+  status.textContent = "";
 });
 
 renderFolder();
