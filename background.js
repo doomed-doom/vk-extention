@@ -43,9 +43,9 @@ function downloadPhoto(url, path) {
   });
 }
 
-async function pngAsJpegUrl(url) {
+async function imageAsJpegUrl(url) {
   const response = await fetch(url, { credentials: "include" });
-  if (!response.ok) throw new Error(`Не удалось получить PNG: HTTP ${response.status}`);
+  if (!response.ok) throw new Error(`Не удалось получить изображение: HTTP ${response.status}`);
 
   const bitmap = await createImageBitmap(await response.blob());
   const canvas = new OffscreenCanvas(bitmap.width, bitmap.height);
@@ -68,6 +68,7 @@ async function startDownloads(message) {
   const seen = new Set();
   const uniquePhotos = photos.filter((photo) => {
     const url = photo.originalUrl || photo.previewUrl;
+    if (/\.gif$/i.test(String(photo.filename || "")) || /\.gif(?:$|[?#])/i.test(url || "")) return false;
     if (!url || seen.has(url)) return false;
     seen.add(url);
     return true;
@@ -83,12 +84,12 @@ async function startDownloads(message) {
   try {
     for (const [index, photo] of uniquePhotos.entries()) {
       const url = photo.originalUrl || photo.previewUrl;
-      const sourceExtension = String(photo.filename || "").match(/\.(jpe?g|png|webp|gif)$/i)?.[1]
-        || new URL(url).pathname.match(/\.(jpe?g|png|webp|gif)$/i)?.[1]
+      const sourceExtension = String(photo.filename || "").match(/\.(jpe?g|png|webp)$/i)?.[1]
+        || new URL(url).pathname.match(/\.(jpe?g|png|webp)$/i)?.[1]
         || "jpg";
-      const isPng = sourceExtension.toLowerCase() === "png";
-      const downloadUrl = isPng ? await pngAsJpegUrl(url) : url;
-      const extension = isPng ? "jpg" : sourceExtension;
+      const needsJpeg = ["png", "webp"].includes(sourceExtension.toLowerCase());
+      const downloadUrl = needsJpeg ? await imageAsJpegUrl(url) : url;
+      const extension = needsJpeg ? "jpg" : sourceExtension;
       await downloadPhoto(downloadUrl, `${folder}/${chat}/photo_${startIndex + index}.${extension}`);
       count += 1;
     }

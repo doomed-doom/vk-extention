@@ -76,13 +76,13 @@
     });
 
     return [...urls]
-      .filter((url) => /\.(jpe?g|png|webp|gif)(\?|$)/i.test(url))
+      .filter((url) => /\.(jpe?g|png|webp)(\?|$)/i.test(url))
       .map(bestPhotoUrl);
   }
 
   function imageDoc(link) {
     const name = link.querySelector("img")?.alt || link.textContent;
-    const isImage = link.querySelector(".PhotoItem__img") || /\b(jpe?g|png|webp|gif)\b/i.test(name);
+    const isImage = link.querySelector(".PhotoItem__img") || /\b(jpe?g|png|webp)\b/i.test(name);
 
     if (!isImage) return null;
 
