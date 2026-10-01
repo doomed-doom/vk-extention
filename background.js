@@ -63,6 +63,21 @@ async function imageAsJpegUrl(url) {
   return `data:image/jpeg;base64,${btoa(binary)}`;
 }
 
+async function heicAsJpegUrl(url) {
+  if (!(await chrome.offscreen.hasDocument())) {
+    await chrome.offscreen.createDocument({
+      url: "offscreen.html",
+      reasons: ["BLOBS"],
+      justification: "Decode selected HEIC photos and convert them to JPEG",
+    });
+  }
+
+  const result = await chrome.runtime.sendMessage({ type: "convertHeic", url });
+  if (result?.error) throw new Error(result.error);
+  if (!result?.dataUrl) throw new Error("Не удалось преобразовать HEIC в JPEG");
+  return result.dataUrl;
+}
+
 async function startDownloads(message) {
   const photos = message.photos || (message.urls || []).map((url) => ({ previewUrl: url }));
   const seen = new Set();
@@ -84,11 +99,14 @@ async function startDownloads(message) {
   try {
     for (const [index, photo] of uniquePhotos.entries()) {
       const url = photo.originalUrl || photo.previewUrl;
-      const sourceExtension = String(photo.filename || "").match(/\.(jpe?g|png|webp)$/i)?.[1]
-        || new URL(url).pathname.match(/\.(jpe?g|png|webp)$/i)?.[1]
+      const sourceExtension = String(photo.filename || "").match(/\.(jpe?g|png|webp|heic|heif)$/i)?.[1]
+        || new URL(url).pathname.match(/\.(jpe?g|png|webp|heic|heif)$/i)?.[1]
         || "jpg";
-      const needsJpeg = ["png", "webp"].includes(sourceExtension.toLowerCase());
-      const downloadUrl = needsJpeg ? await imageAsJpegUrl(url) : url;
+      const format = sourceExtension.toLowerCase();
+      const needsJpeg = ["png", "webp", "heic", "heif"].includes(format);
+      const downloadUrl = ["heic", "heif"].includes(format)
+        ? await heicAsJpegUrl(url)
+        : needsJpeg ? await imageAsJpegUrl(url) : url;
       const extension = needsJpeg ? "jpg" : sourceExtension;
       await downloadPhoto(downloadUrl, `${folder}/${chat}/photo_${startIndex + index}.${extension}`);
       count += 1;

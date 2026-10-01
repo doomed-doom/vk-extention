@@ -9,8 +9,15 @@
   },
   "permissions": [
     "downloads",
-    "storage"
+    "storage",
+    "offscreen"
   ],
+  "sandbox": {
+    "pages": ["heic-sandbox.html"]
+  },
+  "content_security_policy": {
+    "sandbox": "sandbox allow-scripts; script-src 'self'; worker-src blob:; object-src 'self';"
+  },
   "background": {
     "service_worker": "background.js"
   },
