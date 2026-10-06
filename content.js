@@ -1,5 +1,6 @@
 (() => {
   const buttonId = "vk-photo-download-button";
+  const photoButtonId = "vk-photo-gallery-button";
 
   if (window.__vkPhotoDownloadInjected) return;
   window.__vkPhotoDownloadInjected = true;
@@ -7,35 +8,41 @@
   const style = document.createElement("style");
   style.id = `${buttonId}-style`;
   style.textContent = `
-  #${buttonId} {
-    align-items: center;
-    background: transparent;
-    border: 0;
-    border-radius: 8px;
-    box-sizing: border-box;
-    color: rgb(225, 227, 230);
-    cursor: pointer;
-    display: inline-flex;
-    height: 28px;
-    justify-content: center;
-    min-width: 28px;
-    padding: 0;
-    padding-right: 12px;
-    width: 28px;
+  #${buttonId}:hover {
+    background-color: var(--vkui--color_transparent--hover);
+  }
+
+  #${buttonId}:active {
+    background-color: var(--vkui--color_transparent--active);
   }
 
   #${buttonId}:focus-visible {
-    outline: 2px solid #FFFFFF;
+    outline: 2px solid var(--vkui--color_stroke_accent);
     outline-offset: 2px;
   }
 
   #${buttonId} .vk-photo-download-icon {
+    align-items: center;
+    display: flex;
+    flex-shrink: 0;
+    justify-content: center;
+    width: 24px;
+    height: 24px;
+  }
+
+  #${buttonId} .vk-photo-download-icon::before {
     background: currentColor;
+    content: "";
     display: block;
     width: 18px;
     height: 16px;
     mask: url("https://st.vk.ru/images/icons/pv_actions.png") 0 0 / auto no-repeat;
     -webkit-mask: url("https://st.vk.ru/images/icons/pv_actions.png") 0 0 / auto no-repeat;
+  }
+
+  #${photoButtonId} svg {
+    height: 24px;
+    width: 24px;
   }
 `;
   document.documentElement.append(style);
@@ -143,12 +150,11 @@
 
     const button = document.createElement("button");
     button.id = buttonId;
+    button.className = forwardButton.className;
+    button.classList.remove("vkuiButton__singleIcon", "vkuiButton__hover", "vkuiButton__active");
     button.type = "button";
-    button.title = "Скачать фотографии";
     button.setAttribute("aria-label", "Скачать фотографии");
-    button.append(Object.assign(document.createElement("span"), {
-      className: "vk-photo-download-icon",
-    }));
+    button.innerHTML = '<span class="vkuiButton__in"><span class="vkuiButton__before" role="presentation"><span class="vk-photo-download-icon" aria-hidden="true"></span></span><span class="vkuiButton__content"><span class="ComposerSelecting__buttonText">Скачать</span></span></span>';
     button.addEventListener("click", () => {
       const photos = selectedPhotos();
 
@@ -175,9 +181,33 @@
     forwardButton.after(button);
   }
 
-  new MutationObserver(addDownloadButton).observe(document.documentElement, {
+  function addPhotoButton() {
+    if (document.getElementById(photoButtonId)) return;
+    const icon = document.querySelector('#l_ph svg, a[href*="/albums"] svg, [aria-label="Фото"] svg, [title="Фото"] svg');
+    if (!icon) return;
+
+    const callButton = document.querySelector('.ConvoHeader__controls #convo-call-menu-trigger');
+    if (!callButton) return;
+
+    const button = document.createElement("button");
+    button.id = photoButtonId;
+    button.className = callButton.className;
+    button.type = "button";
+    button.setAttribute("aria-label", "Фото");
+    const copy = icon.cloneNode(true);
+    copy.setAttribute("aria-hidden", "true");
+    button.append(copy);
+    (callButton.closest(".DropdownReforged") || callButton).before(button);
+  }
+
+  function addButtons() {
+    addDownloadButton();
+    addPhotoButton();
+  }
+
+  new MutationObserver(addButtons).observe(document.documentElement, {
     childList: true,
     subtree: true,
   });
-  addDownloadButton();
+  addButtons();
 })();

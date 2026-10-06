@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="ru">
+  <meta charset="utf-8">
+  <title>Проверка кнопок VK</title>
+  <style>
+    :root { --vkui--color_transparent--hover: rgba(255, 255, 255, 0.04); --vkui--color_transparent--active: rgba(255, 255, 255, 0.08); --vkui--color_stroke_accent: #71aaeb; }
+    .ComposerSelecting__button { background: transparent; border: 0; height: 28px; border-radius: 8px; padding: 0; transition: background-color .15s ease-out, color .15s ease-out; }
+    .vkuiButton__singleIcon { width: 28px; }
+    .vkuiButton__in { display: flex; align-items: center; }
+    .vkuiButton__before { margin-right: 6px; }
+    .ComposerSelecting__buttonText { font-size: 14px; font-weight: 500; line-height: 18px; }
+  </style>
+  <nav><a href="/albums1" aria-label="Фото"><svg viewBox="0 0 24 24"><path d="M3 3h18v18H3z"/></svg></a></nav>
+  <header class="ConvoHeader"><h2 class="ConvoTitle__author">Тестовый чат</h2><div class="ConvoHeader__controls"><div class="DropdownReforged"><div class="DropdownReforged__trigger"><button id="convo-call-menu-trigger" aria-label="Позвонить">Звонок</button></div></div></div></header>
+  <div aria-label="Действия с выделенными сообщениями"><button class="ComposerSelecting__button vkuiButton__singleIcon vkuiButton__hover vkuiButton__active" aria-label="Переслать"><span class="vkuiButton__in"><span class="vkuiButton__before">→</span><span class="vkuiButton__content"><span class="ComposerSelecting__buttonText">Переслать</span></span></span></button></div>
+  <pre id="result">Проверка…</pre>
+  <script src="content.js"></script>
+  <script>
+    // Open this file in a browser. Also checks reinsertion after VK changes chats.
+    (async () => {
+      const assert = (condition, message) => { if (!condition) throw new Error(message); };
+      const check = () => {
+        const download = document.getElementById("vk-photo-download-button");
+        const photo = document.getElementById("vk-photo-gallery-button");
+        const call = document.querySelector('[aria-label="Позвонить"]');
+        assert(download?.textContent === "Скачать", "Missing download label");
+        const callMenu = call.closest(".DropdownReforged");
+        assert(download.querySelector(".vkuiButton__before .vk-photo-download-icon"), "Icon must precede label");
+        assert(photo?.nextElementSibling === callMenu, "Photo button must precede the entire call menu");
+        assert(!photo.closest(".DropdownReforged__trigger"), "Photo button must not share call trigger");
+        assert(!photo.hasAttribute("title"), "Photo button must not show a native tooltip");
+        assert(photo.querySelector("svg").innerHTML === document.querySelector("nav svg").innerHTML, "Must reuse dock icon");
+        assert(document.querySelectorAll("#vk-photo-gallery-button").length === 1, "Duplicate photo button");
+        assert(document.querySelectorAll("#vk-photo-download-button").length === 1, "Duplicate download button");
+        let calls = 0;
+        callMenu.addEventListener("click", () => { calls += 1; }, { once: true });
+        photo.click();
+        assert(calls === 0, "Photo button must do nothing");
+        let menus = 0;
+        callMenu.addEventListener("mouseover", () => { menus += 1; }, { once: true });
+        photo.dispatchEvent(new MouseEvent("mouseover", { bubbles: true }));
+        assert(menus === 0, "Photo hover must not trigger the call menu");
+        const forward = document.querySelector('button[aria-label="Переслать"]');
+        assert(download.classList.contains("ComposerSelecting__button"), "Must reuse VK button classes");
+        for (const state of ["vkuiButton__singleIcon", "vkuiButton__hover", "vkuiButton__active"]) {
+          assert(!download.classList.contains(state), `Must not copy transient VK state: ${state}`);
+        }
+        const labelStyle = getComputedStyle(download.querySelector(".ComposerSelecting__buttonText"));
+        const forwardStyle = getComputedStyle(forward.querySelector(".ComposerSelecting__buttonText"));
+        for (const property of ["fontFamily", "fontSize", "fontWeight", "lineHeight", "color"]) {
+          assert(labelStyle[property] === forwardStyle[property], `Label style differs: ${property}`);
+        }
+        assert(getComputedStyle(download).width !== "28px", "Download label needs room");
+        const iconStyle = getComputedStyle(download.querySelector(".vk-photo-download-icon"));
+        assert(iconStyle.width === "24px" && iconStyle.height === "24px", "Must use VK icon footprint");
+        assert(getComputedStyle(download).transition === getComputedStyle(forward).transition, "Must reuse VK transitions");
+        const label = download.querySelector(".vkuiButton__content");
+        assert(label.scrollWidth <= label.clientWidth, "Download label must not be clipped");
+      };
+      check();
+      document.getElementById("vk-photo-gallery-button").remove();
+      document.getElementById("vk-photo-download-button").remove();
+      await new Promise(resolve => setTimeout(resolve, 0));
+      check();
+      document.querySelector("header").append(document.createElement("span"));
+      await new Promise(resolve => setTimeout(resolve, 0));
+      check();
+      document.getElementById("result").textContent = "OK: подпись, иконка из меню, расположение, отсутствие действия и дублей, повторная вставка.";
+    })().catch(error => { document.getElementById("result").textContent = `FAIL: ${error.message}`; });
+  </script>
+</html>
