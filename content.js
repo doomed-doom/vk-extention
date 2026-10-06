@@ -1,9 +1,29 @@
 (() => {
   const buttonId = "vk-photo-download-button";
   const photoButtonId = "vk-photo-gallery-button";
+  const runtime = globalThis.chrome?.runtime;
+  if (!runtime?.id || typeof runtime.sendMessage !== "function") return;
 
-  if (window.__vkPhotoDownloadInjected) return;
-  window.__vkPhotoDownloadInjected = true;
+  const previous = window.__vkPhotoDownloadInjected;
+  if (previous?.runtime === runtime) return;
+  previous?.observer?.disconnect();
+  const state = { runtime };
+  window.__vkPhotoDownloadInjected = state;
+  for (const id of [buttonId, photoButtonId, `${buttonId}-style`]) document.getElementById(id)?.remove();
+
+  function sendExtensionMessage(message) {
+    try {
+      if (!runtime.id || typeof runtime.sendMessage !== "function") {
+        throw new Error("Расширение обновлено. Обновите вкладку VK.");
+      }
+      runtime.sendMessage(message, (response = {}) => {
+        const error = runtime.lastError?.message || response.error;
+        if (error) console.error(`VK Photo Extention: ${error}`);
+      });
+    } catch (error) {
+      console.error(`VK Photo Extention: ${error.message || String(error)}. Обновите вкладку VK.`);
+    }
+  }
 
   const style = document.createElement("style");
   style.id = `${buttonId}-style`;
@@ -129,7 +149,7 @@
   }
 
   function chatInfo() {
-    const id = location.pathname.match(/^\/im\/convo\/(\d+)/)?.[1] || "unknown";
+    const id = location.pathname.match(/^\/im\/convo\/(-?\d+)/)?.[1] || "unknown";
     const title = document.querySelector("h2.ConvoTitle__author")?.getAttribute("title")
       || document.querySelector("h2.ConvoTitle__author")?.textContent
       || document.querySelector('[role="banner"] h2')?.textContent
@@ -158,24 +178,7 @@
     button.addEventListener("click", () => {
       const photos = selectedPhotos();
 
-      if (!globalThis.chrome?.runtime?.sendMessage) {
-        console.error("VK Photo Extention: контекст расширения устарел. Перезагрузи вкладку VK.");
-        return;
-      }
-
-      globalThis.chrome.runtime.sendMessage({ type: "downloadPhotos", photos, chat: chatInfo() }, (response = {}) => {
-        if (globalThis.chrome.runtime.lastError) {
-          console.error(`VK Photo Extention: ${globalThis.chrome.runtime.lastError.message}`);
-          return;
-        }
-
-        if (response.error) {
-          console.error(response.error);
-          return;
-        }
-
-        if (response.opened) console.log("Выберите папку для сохранения фотографий в открывшейся вкладке.");
-      });
+      sendExtensionMessage({ type: "downloadPhotos", photos, chat: chatInfo() });
     });
 
     forwardButton.after(button);
@@ -186,18 +189,25 @@
     const icon = document.querySelector('#l_ph svg, a[href*="/albums"] svg, [aria-label="Фото"] svg, [title="Фото"] svg');
     if (!icon) return;
 
-    const callButton = document.querySelector('.ConvoHeader__controls #convo-call-menu-trigger');
-    if (!callButton) return;
+    const controls = document.querySelector(".ConvoHeader__controls");
+    if (!controls) return;
+    const callButton = controls.querySelector("#convo-call-menu-trigger");
+    const templateButton = callButton || controls.querySelector("button");
+    if (!templateButton) return;
 
     const button = document.createElement("button");
     button.id = photoButtonId;
-    button.className = callButton.className;
+    button.className = templateButton.className;
     button.type = "button";
     button.setAttribute("aria-label", "Фото");
     const copy = icon.cloneNode(true);
     copy.setAttribute("aria-hidden", "true");
     button.append(copy);
-    (callButton.closest(".DropdownReforged") || callButton).before(button);
+    button.addEventListener("click", () => {
+      sendExtensionMessage({ type: "openAttachments", chat: chatInfo() });
+    });
+    if (callButton) (callButton.closest(".DropdownReforged") || callButton).before(button);
+    else controls.prepend(button);
   }
 
   function addButtons() {
@@ -205,7 +215,8 @@
     addPhotoButton();
   }
 
-  new MutationObserver(addButtons).observe(document.documentElement, {
+  state.observer = new MutationObserver(addButtons);
+  state.observer.observe(document.documentElement, {
     childList: true,
     subtree: true,
   });

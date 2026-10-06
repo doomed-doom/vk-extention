@@ -14,6 +14,14 @@
   <header class="ConvoHeader"><h2 class="ConvoTitle__author">Тестовый чат</h2><div class="ConvoHeader__controls"><div class="DropdownReforged"><div class="DropdownReforged__trigger"><button id="convo-call-menu-trigger" aria-label="Позвонить">Звонок</button></div></div></div></header>
   <div aria-label="Действия с выделенными сообщениями"><button class="ComposerSelecting__button vkuiButton__singleIcon vkuiButton__hover vkuiButton__active" aria-label="Переслать"><span class="vkuiButton__in"><span class="vkuiButton__before">→</span><span class="vkuiButton__content"><span class="ComposerSelecting__buttonText">Переслать</span></span></span></button></div>
   <pre id="result">Проверка…</pre>
+  <script>
+    // A standalone fixture needs an extension API stub; VK page scripts have no runtime API.
+    window.photoRequests = [];
+    window.chrome = { runtime: { id: "test", sendMessage(message, callback) {
+      window.photoRequests.push(message);
+      callback({ opened: true });
+    } } };
+  </script>
   <script src="content.js"></script>
   <script>
     // Open this file in a browser. Also checks reinsertion after VK changes chats.
@@ -34,8 +42,11 @@
         assert(document.querySelectorAll("#vk-photo-download-button").length === 1, "Duplicate download button");
         let calls = 0;
         callMenu.addEventListener("click", () => { calls += 1; }, { once: true });
+        const requests = window.photoRequests.length;
         photo.click();
-        assert(calls === 0, "Photo button must do nothing");
+        assert(calls === 0, "Photo button must not trigger the call menu");
+        assert(window.photoRequests.length === requests + 1, "Photo button must send one request");
+        assert(window.photoRequests.at(-1).type === "openAttachments", "Photo button must open gallery");
         let menus = 0;
         callMenu.addEventListener("mouseover", () => { menus += 1; }, { once: true });
         photo.dispatchEvent(new MouseEvent("mouseover", { bubbles: true }));
@@ -65,7 +76,39 @@
       document.querySelector("header").append(document.createElement("span"));
       await new Promise(resolve => setTimeout(resolve, 0));
       check();
-      document.getElementById("result").textContent = "OK: подпись, иконка из меню, расположение, отсутствие действия и дублей, повторная вставка.";
+      const runtime = window.chrome.runtime;
+      delete runtime.id;
+      const requests = window.photoRequests.length;
+      document.getElementById("vk-photo-gallery-button").click();
+      assert(window.photoRequests.length === requests, "Invalidated runtime must not send requests");
+      runtime.id = "test";
+      const staleButton = document.getElementById("vk-photo-gallery-button");
+      window.chrome.runtime = { id: "reloaded", sendMessage: runtime.sendMessage };
+      await new Promise((resolve, reject) => {
+        const script = document.createElement("script");
+        script.src = "content.js";
+        script.onload = resolve;
+        script.onerror = reject;
+        document.body.append(script);
+      });
+      assert(document.getElementById("vk-photo-gallery-button") !== staleButton, "Reload must replace stale handlers");
+      check();
+      // Saved Messages has search controls, but no call button.
+      const controls = document.querySelector(".ConvoHeader__controls");
+      controls.querySelector(".DropdownReforged").remove();
+      document.getElementById("vk-photo-gallery-button").remove();
+      const search = document.createElement("button");
+      search.className = "saved-search-button";
+      search.setAttribute("aria-label", "Поиск по чату");
+      controls.append(search);
+      await new Promise(resolve => setTimeout(resolve, 0));
+      const savedPhoto = document.getElementById("vk-photo-gallery-button");
+      assert(savedPhoto?.nextElementSibling === search, "Saved Messages must have a photo button before search");
+      assert(savedPhoto.className === search.className, "Saved photo button must reuse header styles");
+      const savedRequests = window.photoRequests.length;
+      savedPhoto.click();
+      assert(window.photoRequests.length === savedRequests + 1, "Saved photo button must open gallery");
+      document.getElementById("result").textContent = "OK: кнопки, отправка запроса, обновление, Избранное без кнопки звонка.";
     })().catch(error => { document.getElementById("result").textContent = `FAIL: ${error.message}`; });
   </script>
 </html>

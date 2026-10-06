@@ -8,7 +8,8 @@
   },
   "permissions": [
     "storage",
-    "offscreen"
+    "offscreen",
+    "scripting"
   ],
   "sandbox": {
     "pages": ["heic-sandbox.html"]
