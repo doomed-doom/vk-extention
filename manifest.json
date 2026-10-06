@@ -4,11 +4,9 @@
   "version": "1.0.0",
   "description": "Extends VK messanger features.",
   "action": {
-    "default_title": "VK Photo Extention",
-    "default_popup": "popup.html"
+    "default_title": "VK Photo Extention"
   },
   "permissions": [
-    "downloads",
     "storage",
     "offscreen"
   ],

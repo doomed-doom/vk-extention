@@ -1,66 +1,17 @@
-function cleanName(value) {
-  return String(value || "Chat")
-    .replace(/[<>:"/\\|?*\u0000-\u001f]/g, "_")
-    .replace(/\s+/g, " ")
-    .trim()
-    .slice(0, 80) || "Chat";
-}
+chrome.action.onClicked.addListener(() => {
+  chrome.tabs.create({ url: chrome.runtime.getURL("popup.html") });
+});
 
-function chatFolder(chat) {
-  return `${cleanName(chat?.name)}_${cleanName(chat?.id)}`;
-}
-
-function downloadFolder(value) {
-  const segments = String(value || "VK Photos")
-    .replace(/\\/g, "/")
-    .split("/")
-    .filter((segment) => segment && segment !== "." && segment !== "..");
-  return segments.map(cleanName).join("/") || "VK Photos";
-}
-
-function photoIndex(name) {
-  return Number(name.match(/^photo_(\d+)(?: \(\d+\))?\./)?.[1] || 0);
-}
-
-async function nextDownloadIndex(folder, chat) {
-  const items = await chrome.downloads.search({});
-  const prefix = `/${folder}/${chat}/`;
-  return items.reduce((max, item) => {
-    const path = String(item.filename || "").replace(/\\/g, "/");
-    if (path.includes(prefix) && (item.exists !== false || item.state === "in_progress")) {
-      max = Math.max(max, photoIndex(path.split("/").pop()));
-    }
-    return max;
-  }, 0) + 1;
-}
-
-function downloadPhoto(url, path) {
-  return chrome.downloads.download({
-    url,
-    filename: path,
-    conflictAction: "uniquify",
-    saveAs: false,
-  });
-}
-
-async function imageAsJpegUrl(url) {
-  const response = await fetch(url, { credentials: "include" });
-  if (!response.ok) throw new Error(`Не удалось получить изображение: HTTP ${response.status}`);
-
-  const bitmap = await createImageBitmap(await response.blob());
-  const canvas = new OffscreenCanvas(bitmap.width, bitmap.height);
-  const context = canvas.getContext("2d");
-  context.fillStyle = "#fff";
-  context.fillRect(0, 0, canvas.width, canvas.height);
-  context.drawImage(bitmap, 0, 0);
-  bitmap.close();
-
-  const bytes = new Uint8Array(await (await canvas.convertToBlob({ type: "image/jpeg", quality: 0.92 })).arrayBuffer());
-  let binary = "";
-  for (let offset = 0; offset < bytes.length; offset += 0x8000) {
-    binary += String.fromCharCode(...bytes.subarray(offset, offset + 0x8000));
+async function openDownloadTab(message) {
+  const id = `photoJob:${crypto.randomUUID()}`;
+  await chrome.storage.session.set({ [id]: message });
+  try {
+    await chrome.tabs.create({ url: `${chrome.runtime.getURL("popup.html")}?job=${encodeURIComponent(id)}` });
+    return { opened: true };
+  } catch (error) {
+    await chrome.storage.session.remove(id);
+    throw error;
   }
-  return `data:image/jpeg;base64,${btoa(binary)}`;
 }
 
 async function heicAsJpegUrl(url) {
@@ -75,56 +26,21 @@ async function heicAsJpegUrl(url) {
   const result = await chrome.runtime.sendMessage({ type: "convertHeic", url });
   if (result?.error) throw new Error(result.error);
   if (!result?.dataUrl) throw new Error("Не удалось преобразовать HEIC в JPEG");
-  return result.dataUrl;
+  return result;
 }
 
-async function startDownloads(message) {
-  const photos = message.photos || (message.urls || []).map((url) => ({ previewUrl: url }));
-  const seen = new Set();
-  const uniquePhotos = photos.filter((photo) => {
-    const url = photo.originalUrl || photo.previewUrl;
-    if (/\.gif$/i.test(String(photo.filename || "")) || /\.gif(?:$|[?#])/i.test(url || "")) return false;
-    if (!url || seen.has(url)) return false;
-    seen.add(url);
-    return true;
-  });
-
-  if (!uniquePhotos.length) return { count: 0 };
-
-  const chat = chatFolder(message.chat);
-  const folder = downloadFolder((await chrome.storage.local.get({ downloadFolder: "VK Photos" })).downloadFolder);
-  const startIndex = await nextDownloadIndex(folder, chat);
-  let count = 0;
-
-  try {
-    for (const [index, photo] of uniquePhotos.entries()) {
-      const url = photo.originalUrl || photo.previewUrl;
-      const sourceExtension = String(photo.filename || "").match(/\.(jpe?g|png|webp|heic|heif)$/i)?.[1]
-        || new URL(url).pathname.match(/\.(jpe?g|png|webp|heic|heif)$/i)?.[1]
-        || "jpg";
-      const format = sourceExtension.toLowerCase();
-      const needsJpeg = ["png", "webp", "heic", "heif"].includes(format);
-      const downloadUrl = ["heic", "heif"].includes(format)
-        ? await heicAsJpegUrl(url)
-        : needsJpeg ? await imageAsJpegUrl(url) : url;
-      const extension = needsJpeg ? "jpg" : sourceExtension;
-      await downloadPhoto(downloadUrl, `${folder}/${chat}/photo_${startIndex + index}.${extension}`);
-      count += 1;
-    }
-  } catch (error) {
-    return { count, folder: `${folder}/${chat}`, error: error.message || String(error) };
+let conversionQueue = Promise.resolve();
+chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+  let task;
+  if (message?.type === "downloadPhotos") {
+    task = openDownloadTab(message);
+  } else if (message?.type === "prepareHeic" && sender.url?.startsWith(chrome.runtime.getURL("popup.html"))) {
+    task = conversionQueue.then(() => heicAsJpegUrl(message.url));
+    conversionQueue = task.catch(() => {});
+  } else {
+    return;
   }
 
-  return { count, folder: `${folder}/${chat}` };
-}
-
-let downloadQueue = Promise.resolve();
-chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
-  if (message?.type !== "downloadPhotos") return;
-
-  const task = downloadQueue.then(() => startDownloads(message));
-  downloadQueue = task.catch(() => {});
-  task.then(sendResponse).catch((error) => sendResponse({ count: 0, error: error.message || String(error) }));
-
+  task.then(sendResponse).catch((error) => sendResponse({ error: error.message || String(error) }));
   return true;
 });

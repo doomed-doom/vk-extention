@@ -121,10 +121,6 @@
     return photos;
   }
 
-  function selectedPhotoCount() {
-    return selectedPhotos().length;
-  }
-
   function chatInfo() {
     const id = location.pathname.match(/^\/im\/convo\/(\d+)/)?.[1] || "unknown";
     const title = document.querySelector("h2.ConvoTitle__author")?.getAttribute("title")
@@ -168,17 +164,11 @@
         }
 
         if (response.error) {
-          if (response.count) console.log(`Сохранено ${response.count} фотографий`);
           console.error(response.error);
           return;
         }
 
-        let photoCount = response.count ?? selectedPhotoCount();
-        console.log(
-          photoCount
-            ? `Загружается ${photoCount} фото`
-            : "Не обнаружено кандидатов для скачивания"
-        );
+        if (response.opened) console.log("Выберите папку для сохранения фотографий в открывшейся вкладке.");
       });
     });
 
