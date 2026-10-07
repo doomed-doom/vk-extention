@@ -1,5 +1,6 @@
 const button = document.getElementById("save-photos");
 const zipButton = document.getElementById("save-zip");
+const chatSubfolder = document.getElementById("chat-subfolder");
 const status = document.getElementById("status");
 const summary = document.getElementById("summary");
 const jobId = new URL(location.href).searchParams.get("job");
@@ -161,6 +162,7 @@ function renderGallery() {
     const name = document.createElement("span");
     name.className = "attachment-name";
     name.textContent = item.filename;
+    name.title = item.filename;
     const date = document.createElement("span");
     date.className = "attachment-date";
     date.textContent = `${item.date ? dateFormat.format(new Date(item.date * 1000)) : "Дата неизвестна"}${item.saved ? " · Сохранено" : ""}`;
@@ -279,8 +281,8 @@ async function photoBlob(photo) {
 }
 
 async function savePhotos(root) {
-  const chat = `${cleanName(job.chat?.name)}_${cleanName(job.chat?.id)}`;
-  const directory = await root.getDirectoryHandle(chat, { create: true });
+  const chat = chatSubfolder.checked ? `${cleanName(job.chat?.name)}_${cleanName(job.chat?.id)}` : "";
+  const directory = chat ? await root.getDirectoryHandle(chat, { create: true }) : root;
   let index = await nextPhotoIndex(directory);
   while (photos.length) {
     const photo = photos[0];
@@ -301,7 +303,7 @@ async function savePhotos(root) {
     savedCount += 1;
     status.textContent = `Сохранено фотографий: ${savedCount}. Осталось: ${photos.length}.`;
   }
-  status.textContent = `Сохранено фотографий: ${savedCount}. Папка: ${root.name}/${chat}.`;
+  status.textContent = `Сохранено фотографий: ${savedCount}. Папка: ${root.name}${chat ? `/${chat}` : ""}.`;
   button.textContent = "Фотографии сохранены";
   if (job.type !== "openAttachments") await chrome.storage.session.remove(jobId);
 }
@@ -337,6 +339,7 @@ async function saveSelected(asZip) {
   if (!photos.length) return;
   savedCount = 0;
   busy = true;
+  chatSubfolder.disabled = true;
   button.disabled = true;
   zipButton.disabled = true;
   if (job.type === "openAttachments") renderGallery();
@@ -360,6 +363,7 @@ async function saveSelected(asZip) {
       : `${asZip ? "Архив не сохранён" : `Сохранено: ${savedCount}`}. Ошибка: ${error.message || String(error)}`;
   } finally {
     busy = false;
+    chatSubfolder.disabled = false;
     button.disabled = !photos.length || typeof window.showDirectoryPicker !== "function";
     zipButton.disabled = !photos.length || typeof window.showSaveFilePicker !== "function";
     if (job.type === "openAttachments") renderGallery();
