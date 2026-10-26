@@ -49,10 +49,11 @@ async function attachmentPage(message) {
   const [result] = await chrome.scripting.executeScript({
     target: { tabId: job.sourceTabId },
     world: "MAIN",
-    func: async (peerId, mediaType, startFrom) => {
+    func: async (peerId, mediaType, startFrom, groupId) => {
       try {
         if (!window.vkApi?.api) throw new Error("Откройте чат VK и обновите его вкладку.");
         const params = { peer_id: peerId, media_type: mediaType, count: 200, photo_sizes: 1, preserve_order: 1 };
+        if (groupId) params.group_id = groupId;
         if (startFrom) params.start_from = startFrom;
         const data = await window.vkApi.api("messages.getHistoryAttachments", params);
         if (!Array.isArray(data?.items)) throw new Error(data?.error?.error_msg || "VK не вернул список вложений");
@@ -61,7 +62,7 @@ async function attachmentPage(message) {
         return { error: error.message || error.error_msg || String(error) };
       }
     },
-    args: [Number(job.chat.id), message.mediaType, message.startFrom || ""],
+    args: [Number(job.chat.id), message.mediaType, message.startFrom || "", Number(job.chat.groupId) || 0],
   });
   if (!result?.result) throw new Error("Не удалось получить вложения. Оставьте вкладку VK открытой.");
   return result.result;
@@ -74,6 +75,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   } else if (message?.type === "openAttachments" && sender.tab
       && /^https:\/\/(?:[^/]+\.)?vk\.(?:com|ru)\//.test(sender.url || "")) {
     task = /^-?\d+$/.test(String(message.chat?.id))
+      && (message.chat?.groupId == null || /^\d+$/.test(String(message.chat.groupId)))
       ? openDownloadTab({ type: "openAttachments", chat: message.chat, sourceTabId: sender.tab.id })
       : Promise.reject(new Error("Не удалось определить текущий чат"));
   } else if (message?.type === "attachmentPage" && sender.url?.startsWith(chrome.runtime.getURL("popup.html"))) {

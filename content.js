@@ -149,7 +149,9 @@
   }
 
   function chatInfo() {
-    const id = location.pathname.match(/^\/im\/convo\/(-?\d+)/)?.[1] || "unknown";
+    const directChat = location.pathname.match(/^\/im\/convo\/(-?\d+)/);
+    const communityChat = location.pathname.match(/^\/gim(\d+)\/convo\/(\d+)/);
+    const id = directChat?.[1] || communityChat?.[2] || "unknown";
     const title = document.querySelector("h2.ConvoTitle__author")?.getAttribute("title")
       || document.querySelector("h2.ConvoTitle__author")?.textContent
       || document.querySelector('[role="banner"] h2')?.textContent
@@ -158,6 +160,9 @@
     return {
       id,
       name: title.trim().replace(/\s+/g, " "),
+      // Community inbox URLs identify both the community and the interlocutor.
+      // `group_id` is required by VK for requests made in that inbox context.
+      ...(communityChat ? { groupId: communityChat[1] } : {}),
     };
   }
 
