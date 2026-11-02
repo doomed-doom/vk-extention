@@ -1,5 +1,5 @@
 chrome.action.onClicked.addListener(() => {
-  chrome.tabs.create({ url: chrome.runtime.getURL("popup.html") });
+  chrome.tabs.create({ url: chrome.runtime.getURL("popup/popup.html") });
 });
 
 // Reloading an unpacked extension leaves its old buttons in existing VK tabs.
@@ -7,14 +7,14 @@ chrome.runtime.onInstalled.addListener(async () => {
   const tabs = await chrome.tabs.query({ url: chrome.runtime.getManifest().content_scripts[0].matches });
   await Promise.all(tabs.map((tab) => chrome.scripting.executeScript({
     target: { tabId: tab.id }, files: ["content.js"], world: "ISOLATED",
-  }).catch((error) => console.warn(`VK Photo Extention: ${error.message}`))));
+  }).catch((error) => console.warn(`VK Photo Extension: ${error.message}`))));
 });
 
 async function openDownloadTab(message) {
   const id = `photoJob:${crypto.randomUUID()}`;
   await chrome.storage.session.set({ [id]: message });
   try {
-    await chrome.tabs.create({ url: `${chrome.runtime.getURL("popup.html")}?job=${encodeURIComponent(id)}` });
+    await chrome.tabs.create({ url: `${chrome.runtime.getURL("popup/popup.html")}?job=${encodeURIComponent(id)}` });
     return { opened: true };
   } catch (error) {
     await chrome.storage.session.remove(id);
@@ -25,7 +25,7 @@ async function openDownloadTab(message) {
 async function heicAsJpegUrl(url) {
   if (!(await chrome.offscreen.hasDocument())) {
     await chrome.offscreen.createDocument({
-      url: "offscreen.html",
+      url: "offscreen/offscreen.html",
       reasons: ["BLOBS"],
       justification: "Decode selected HEIC photos and convert them to JPEG",
     });
@@ -78,9 +78,9 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       && (message.chat?.groupId == null || /^\d+$/.test(String(message.chat.groupId)))
       ? openDownloadTab({ type: "openAttachments", chat: message.chat, sourceTabId: sender.tab.id })
       : Promise.reject(new Error("Не удалось определить текущий чат"));
-  } else if (message?.type === "attachmentPage" && sender.url?.startsWith(chrome.runtime.getURL("popup.html"))) {
+  } else if (message?.type === "attachmentPage" && sender.url?.startsWith(chrome.runtime.getURL("popup/popup.html"))) {
     task = attachmentPage(message);
-  } else if (message?.type === "prepareHeic" && sender.url?.startsWith(chrome.runtime.getURL("popup.html"))) {
+  } else if (message?.type === "prepareHeic" && sender.url?.startsWith(chrome.runtime.getURL("popup/popup.html"))) {
     task = conversionQueue.then(() => heicAsJpegUrl(message.url));
     conversionQueue = task.catch(() => {});
   } else {

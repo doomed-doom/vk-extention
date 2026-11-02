@@ -1,0 +1,64 @@
+END USER LICENSE AGREEMENT
+
+Last updated: November 2, 2026
+
+This End User License Agreement ("Agreement") governs your use of the
+VK Photo Extension ("Extension") distributed through Opera Add-ons.
+
+1. License Grant
+
+The developer grants you a limited, non-exclusive, non-transferable,
+revocable license to install and use the Extension for personal or
+commercial purposes in accordance with this Agreement and applicable law.
+
+2. Restrictions
+
+Except where permitted by applicable law or a third-party license, you may
+not reproduce, redistribute, sell, sublicense, modify, or create derivative
+works from the Extension. You may not use the Extension to violate the rights
+of others or the terms of any website or service.
+
+3. User Responsibility
+
+You are responsible for ensuring that you have the right to access, download,
+store, and use any content processed with the Extension. The Extension does
+not grant you any rights to third-party content.
+
+4. Third-Party Software
+
+The Extension includes third-party software that is governed by its own
+license terms. Those terms take precedence over this Agreement solely with
+respect to the applicable third-party software. Details are provided in
+THIRD_PARTY_NOTICES.txt included with the Extension.
+
+5. Disclaimer of Warranty
+
+The Extension is provided "as is" and "as available", without warranties of
+any kind, express or implied, to the maximum extent permitted by applicable
+law. The developer does not warrant that the Extension will be uninterrupted,
+error-free, or compatible with every browser, website, or service.
+
+6. Limitation of Liability
+
+To the maximum extent permitted by applicable law, the developer shall not be
+liable for any indirect, incidental, special, consequential, or punitive
+damages, or for any loss of data, content, profits, or business arising from
+the use of or inability to use the Extension.
+
+7. Termination
+
+This Agreement remains effective until terminated. Your rights under this
+Agreement terminate automatically if you materially breach it. Upon
+termination, you must stop using and uninstall the Extension.
+
+8. Changes
+
+The developer may update this Agreement for future versions of the Extension.
+The version supplied with a particular release governs that release.
+
+9. Contact and Ownership
+
+The Extension and its original code are owned by the developer identified in
+the corresponding Opera Add-ons listing. Questions about this Agreement may
+be sent through the support contact shown in that listing.
+

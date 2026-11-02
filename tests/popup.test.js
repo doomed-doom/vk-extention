@@ -42,7 +42,7 @@ async function main() {
       navigator: { locks: { async request(name, callback) { return callback(); } } },
       async fetch() { return { ok: true, async blob() { return "image"; } }; },
     });
-    vm.runInContext(fs.readFileSync(`${__dirname}/popup.js`, "utf8"), context);
+    vm.runInContext(fs.readFileSync(`${__dirname}/../popup/popup.js`, "utf8"), context);
     vm.runInContext('job = { chat: { name: "A/B", id: 42 } }; photos = [{ originalUrl: "https://vk.com/photo.jpg" }];', context);
     await vm.runInContext("saveSelected(false)", context);
     assert.deepEqual(folders, checked ? ["A_B_42"] : []);

@@ -1,0 +1,17 @@
+THIRD-PARTY SOFTWARE NOTICES
+
+This product includes heic-to, which is licensed under the GNU Lesser General
+Public License, version 3, or (at your option) any later version
+(LGPL-3.0-or-later).
+
+The applicable license text is included in:
+
+    vendor/heic-to-LICENSE.txt
+
+The heic-to component is located in:
+
+    vendor/heic-to-csp.min.js
+
+The terms of the LGPL apply to heic-to and are not replaced or restricted by
+the End User License Agreement for the remainder of this product.
+
